@@ -2,7 +2,7 @@
 
 A precise, beautiful metronome for musicians — built as a Progressive Web App (PWA) that works in any browser and installs on Android and iOS like a native app.
 
-[![Launch App](https://img.shields.io/badge/🎵%20Open%20the%20Metronome%20App-Launch-bb86fc?style=for-the-badge&logo=google-chrome&logoColor=white)](https://burak-aksoy.github.io/Metronome/metronom.html)
+[![Launch App](https://img.shields.io/badge/🎵%20Open%20the%20Metronome%20App-Launch-bb86fc?style=for-the-badge&logo=google-chrome&logoColor=white)](https://burak-aksoy.github.io/Metronome/piki_metronome.html)
 
 ---
 
@@ -76,7 +76,7 @@ The `nginx.conf` is configured to read Railway's `$PORT` environment variable au
 ## Project Structure
 
 ```
-metronom.html   # The entire app (single-file HTML/CSS/JS)
+piki_metronome.html   # The entire app (single-file HTML/CSS/JS)
 manifest.json   # PWA manifest (name, icons, display mode)
 sw.js           # Service worker (offline caching)
 Dockerfile      # nginx:alpine container for deployment

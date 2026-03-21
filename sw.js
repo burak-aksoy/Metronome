@@ -1,5 +1,5 @@
-const CACHE = 'metronome-v1';
-const ASSETS = ['./metronom.html', './manifest.json'];
+const CACHE = 'metronome-v2';
+const ASSETS = ['./piki_metronome.html', './manifest.json'];
 
 self.addEventListener('install', e => {
     e.waitUntil(

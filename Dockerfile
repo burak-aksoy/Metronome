@@ -4,7 +4,7 @@ FROM nginx:alpine
 RUN rm /etc/nginx/conf.d/default.conf
 
 # Copy app files
-COPY metronom.html /usr/share/nginx/html/index.html
+COPY piki_metronome.html /usr/share/nginx/html/index.html
 COPY manifest.json /usr/share/nginx/html/manifest.json
 COPY sw.js /usr/share/nginx/html/sw.js
 COPY nginx.conf /etc/nginx/templates/default.conf.template
