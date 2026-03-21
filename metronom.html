@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Pro Metronome</title>
     <meta name="theme-color" content="#121212">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Metronome">
+    <link rel="manifest" href="manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
     <style>
         :root {
@@ -26,7 +31,15 @@
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            user-select: none; /* Prevent text selection on double taps */
+            user-select: none;
+            -webkit-tap-highlight-color: transparent; /* Remove grey flash on tap */
+            touch-action: manipulation; /* Eliminate 300ms tap delay */
+        }
+
+        html {
+            /* Prevent elastic bounce scroll revealing bg on Android */
+            background-color: var(--bg-color);
+            height: 100%;
         }
 
         body {
@@ -36,14 +49,21 @@
             justify-content: center;
             align-items: flex-start;
             min-height: 100vh;
+            min-height: 100dvh; /* Dynamic viewport height - accounts for Android browser chrome */
             overflow-y: auto;
+            overscroll-behavior: none; /* Prevent pull-to-refresh interfering */
         }
 
         .container {
             width: 100%;
             max-width: 500px;
             min-height: 100vh;
-            padding: 12px 16px;
+            min-height: 100dvh;
+            /* Respect notch / gesture bar safe areas */
+            padding: calc(12px + env(safe-area-inset-top))
+                     calc(16px + env(safe-area-inset-right))
+                     calc(12px + env(safe-area-inset-bottom))
+                     calc(16px + env(safe-area-inset-left));
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -69,7 +89,12 @@
             font-size: 1.5rem;
             cursor: pointer;
             color: var(--text-secondary);
-            padding: 10px;
+            padding: 12px;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Visualizer */
@@ -97,6 +122,7 @@
             color: var(--text-secondary);
             transition: all 0.1s ease-out;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            will-change: transform, background-color, box-shadow;
         }
 
         .beat-indicator.active {
@@ -170,28 +196,56 @@
             gap: 15px;
         }
 
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            outline: none;
+            cursor: pointer;
+        }
+
         #bpm-slider {
             flex-grow: 1;
-            -webkit-appearance: none;
             height: 6px;
             background: #444;
             border-radius: 3px;
-            outline: none;
+        }
+
+        #bpm-slider::-webkit-slider-runnable-track {
+            height: 6px;
+            background: #444;
+            border-radius: 3px;
         }
 
         #bpm-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background: var(--primary-color);
             cursor: pointer;
             box-shadow: 0 0 10px rgba(187, 134, 252, 0.5);
+            /* Vertically center the thumb over the track on Android */
+            margin-top: -11px;
+        }
+
+        #bpm-slider::-moz-range-track {
+            height: 6px;
+            background: #444;
+            border-radius: 3px;
+        }
+
+        #bpm-slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            border: none;
+            box-shadow: 0 0 10px rgba(187, 134, 252, 0.5);
         }
 
         .adjust-btn {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             border: none;
             background-color: #333;
@@ -201,6 +255,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .adjust-btn:active {
@@ -211,12 +266,13 @@
             background-color: transparent;
             border: 2px solid var(--text-secondary);
             color: var(--text-secondary);
-            padding: 10px;
+            padding: 12px 10px;
             border-radius: 10px;
             font-size: 0.9rem;
             cursor: pointer;
             font-weight: bold;
             letter-spacing: 1px;
+            min-height: 44px;
         }
 
         .secondary-btn:active {
@@ -259,13 +315,16 @@
         }
 
         .stepper-btn {
-            width: 30px;
-            height: 30px;
+            width: 44px;
+            height: 44px;
             background: none;
             border: none;
             color: white;
             font-size: 1.2rem;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #beats-val {
@@ -282,12 +341,14 @@
             border-radius: 10px;
             font-size: 1rem;
             appearance: none;
+            -webkit-appearance: none;
             text-align: center;
+            min-height: 44px;
         }
 
         .primary-btn {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             border: none;
             border-radius: 12px;
             font-size: 1.1rem;
@@ -296,6 +357,7 @@
             transition: background-color 0.2s;
             letter-spacing: 2px;
             color: #000;
+            min-height: 52px;
         }
 
         .primary-btn.play {
@@ -326,6 +388,37 @@
             flex-grow: 1;
             height: 4px;
             background: #444;
+            border-radius: 2px;
+        }
+
+        #volume::-webkit-slider-runnable-track {
+            height: 4px;
+            background: #444;
+            border-radius: 2px;
+        }
+
+        #volume::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            cursor: pointer;
+            margin-top: -9px;
+        }
+
+        #volume::-moz-range-track {
+            height: 4px;
+            background: #444;
+            border-radius: 2px;
+        }
+
+        #volume::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            border: none;
         }
 
         @media (min-width: 600px) {
@@ -1003,6 +1096,11 @@
         // Start the app
         window.addEventListener('DOMContentLoaded', () => {
             const metronome = new Metronome();
+
+            // Register service worker for PWA / offline support
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            }
         });
     </script>
 </body>
