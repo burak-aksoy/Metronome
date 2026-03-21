@@ -2,7 +2,8 @@
 
 A precise, beautiful metronome for musicians — built as a Progressive Web App (PWA) that works in any browser and installs on Android and iOS like a native app.
 
-**[Live Demo →](https://metronome.up.railway.app)** *(update this link after deploying to Railway)*
+**[Live Demo →](https://burak-aksoy.github.io/Metronome/metronom.html)**
+**[Railway →](https://metronome.up.railway.app)**
 
 ---
 

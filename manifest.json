@@ -3,6 +3,7 @@
   "short_name": "Metronome",
   "description": "A precise, beautiful metronome for musicians",
   "start_url": "./metronom.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#121212",
