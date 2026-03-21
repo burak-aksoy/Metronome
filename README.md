@@ -1,4 +1,4 @@
-# Pro Metronome
+# Piki Metronome
 
 A precise, beautiful metronome for musicians — built as a Progressive Web App (PWA) that works in any browser and installs on Android and iOS like a native app.
 
