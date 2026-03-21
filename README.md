@@ -2,7 +2,13 @@
 
 A precise, beautiful metronome for musicians — built as a Progressive Web App (PWA) that works in any browser and installs on Android and iOS like a native app.
 
-**[Live Demo →](https://burak-aksoy.github.io/Metronome/metronom.html)**
+<div align="center">
+
+### 🎵 [Open the Metronome App](https://burak-aksoy.github.io/Metronome/metronom.html) 🎵
+
+[![Launch App](https://img.shields.io/badge/Launch%20App-Pro%20Metronome-bb86fc?style=for-the-badge&logo=google-chrome&logoColor=white)](https://burak-aksoy.github.io/Metronome/metronom.html)
+
+</div>
 
 ---
 
