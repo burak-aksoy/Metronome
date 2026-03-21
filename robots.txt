@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://burak-aksoy.github.io/Metronome/sitemap.xml
