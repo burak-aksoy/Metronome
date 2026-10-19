@@ -22,7 +22,7 @@ A precise, beautiful metronome for musicians — built as a Progressive Web App 
 - **Strum mode** — build a guitar strumming pattern and practice with it
   - Pick a meter (4/4 in 8ths or 16ths, 3/4, 2/4, 6/8, 12/8 shuffle, 9/8 karşılama) and set each slot to down ↓, up ↑, mute ✕ (chuck) or rest
   - A drum groove is generated to fit your strum: hi-hat follows the strokes, snare on backbeats and chucks, kick pushes with syncopated strums
-  - Synthesized guitar strum (Karplus-Strong) with chord choice — can be turned off to play along yourself
+  - Warm classical (nylon-string) guitar strum — tuned string models, soft finger pluck, wooden body resonance and room reverb — with chord choice; can be turned off to play along yourself
   - Save patterns by name (with meter, chord and tempo) in browser storage and load them later
 - **Visual beat indicator** — animated circle + per-beat dots
 - **Volume control**

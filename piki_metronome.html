@@ -1490,7 +1490,7 @@
         // The first tap gives the natural direction: down on the beat side, up on the off side
         const NEXT_STROKE_ON = { '.': 'D', D: 'U', U: 'X', X: '.' };
         const NEXT_STROKE_OFF = { '.': 'U', U: 'D', D: 'X', X: '.' };
-        const STROKE_LEVEL = { D: 0.6, U: 0.42, X: 0.5 };
+        const STROKE_LEVEL = { D: 0.5, U: 0.36, X: 0.4 };
 
         // String frequencies low E -> high E, null = string not played
         const CHORDS = {
@@ -1499,12 +1499,18 @@
             C:  [null, 130.81, 164.81, 196.00, 261.63, 329.63],
             D:  [null, null, 146.83, 220.00, 293.66, 369.99],
             Dm: [null, null, 146.83, 220.00, 293.66, 349.23],
+            Bm: [null, 123.47, 185.00, 246.94, 293.66, 369.99],
+            B7: [null, 123.47, 155.56, 220.00, 246.94, 369.99],
             E:  [82.41, 123.47, 164.81, 207.65, 246.94, 329.63],
+            E7: [82.41, 123.47, 146.83, 207.65, 246.94, 329.63],
             Em: [82.41, 123.47, 164.81, 196.00, 246.94, 329.63],
+            F:  [87.31, 130.81, 174.61, 220.00, 261.63, 349.23],
             G:  [98.00, 123.47, 146.83, 196.00, 246.94, 392.00]
         };
 
-        // Plucked-string (Karplus-Strong) strums, rendered lazily per chord and stroke
+        // Classical (nylon-string) guitar strums, rendered lazily per chord and stroke.
+        // Each string is a tuned Karplus-Strong model with a soft finger pluck,
+        // then the strum is shaped by wooden body resonances and a warm lowpass.
         class GuitarKit {
             constructor() {
                 this.buffers = {};
@@ -1523,47 +1529,149 @@
             }
 
             renderStrum(freqs, stroke) {
-                const out = new Float32Array(Math.ceil(1.6 * this.sampleRate));
+                const sr = this.sampleRate;
+                const out = new Float32Array(Math.ceil(2.6 * sr));
                 const strings = freqs.filter(f => f);
-                // Down strums sweep low -> high across all strings, up strums catch the top four
+                // Down strums sweep bass -> treble across all strings, up strums catch the top four
                 const order = stroke === 'D' ? strings : strings.slice().reverse().slice(0, 4);
-                const spread = stroke === 'D' ? 0.011 : 0.008;
-                order.forEach((freq, i) => this.pluck(out, Math.round(i * spread * this.sampleRate), freq, 0.998));
-                this.fadeOut(out, 0.25);
+                // An unhurried finger strum: a little space between strings, slightly uneven like a real hand
+                const spacing = stroke === 'D' ? 0.014 : 0.01;
+                let t = 0;
+                order.forEach((freq, i) => {
+                    const amp = (stroke === 'D' ? 1 - i * 0.05 : 0.8 - i * 0.06) * (0.9 + Math.random() * 0.15);
+                    this.pluckString(out, Math.round(t * sr), freq, { amp, decay: 1.6 + 1.6 * (82.41 / freq) });
+                    t += spacing * (0.8 + Math.random() * 0.4);
+                });
+                this.body(out);
+                this.fadeOut(out, 0.3);
                 return this.normalize(out);
             }
 
+            // Palm-muted strum: short, soft "tsk" with a woody thump
             renderChuck() {
-                const out = new Float32Array(Math.ceil(0.15 * this.sampleRate));
-                CHORDS.Em.forEach((freq, i) => this.pluck(out, Math.round(i * 0.004 * this.sampleRate), freq, 0.9));
-                // Palm slap on the strings
+                const sr = this.sampleRate;
+                const out = new Float32Array(Math.ceil(0.25 * sr));
+                CHORDS.Em.forEach((freq, i) => {
+                    this.pluckString(out, Math.round(i * 0.005 * sr), freq, { amp: 0.8, decay: 0.07 });
+                });
                 let lp = 0;
-                const slapLength = Math.round(0.04 * this.sampleRate);
-                for (let n = 0; n < slapLength; n++) {
-                    lp += 0.2 * ((Math.random() * 2 - 1) - lp);
-                    out[n] += lp * 3 * (1 - n / slapLength);
+                const thumpLength = Math.round(0.05 * sr);
+                for (let n = 0; n < thumpLength; n++) {
+                    lp += 0.08 * ((Math.random() * 2 - 1) - lp);
+                    out[n] += lp * 6 * (1 - n / thumpLength);
                 }
-                this.fadeOut(out, 0.05);
+                this.body(out);
+                this.fadeOut(out, 0.08);
                 return this.normalize(out);
             }
 
-            pluck(out, start, freq, damping) {
-                const period = Math.round(this.sampleRate / freq);
-                const delay = new Float32Array(period);
-                // Softened noise burst excites the string
-                let prev = 0;
-                for (let i = 0; i < period; i++) {
-                    prev = 0.5 * prev + 0.5 * (Math.random() * 2 - 1);
-                    delay[i] = prev;
+            // Two slightly detuned string models: like the two vibration planes of a real
+            // string, they beat gently against each other and make the tone breathe
+            pluckString(out, start, freq, opts) {
+                this.string(out, start, freq * 1.0007, { ...opts, amp: opts.amp * 0.55 });
+                this.string(out, start, freq * 0.9993, { ...opts, amp: opts.amp * 0.45 });
+            }
+
+            string(out, start, freq, { amp, decay }) {
+                const sr = this.sampleRate;
+                // Loop lowpass: higher = darker. Nylon loses its overtones quickly.
+                const b = 0.3;
+                // Exact tuning: the loop filter adds b/(1-b) samples of delay,
+                // a first-order allpass covers the fractional rest
+                const total = sr / freq - b / (1 - b);
+                const length = Math.floor(total - 0.1);
+                const frac = total - length;
+                const c = (1 - frac) / (1 + frac);
+                // Loss per period so the fundamental fades by 60 dB over `decay` seconds
+                const w = 2 * Math.PI * freq / sr;
+                const lpGain = (1 - b) / Math.sqrt(1 - 2 * b * Math.cos(w) + b * b);
+                const loss = Math.min(0.99995, Math.pow(0.001, 1 / (decay * freq)) / lpGain);
+
+                // Soft finger pluck: heavily smoothed noise instead of a sharp pick
+                const pluck = new Float32Array(length);
+                let lp1 = 0, lp2 = 0;
+                for (let i = 0; i < length; i++) {
+                    lp1 += 0.35 * ((Math.random() * 2 - 1) - lp1);
+                    lp2 += 0.35 * (lp1 - lp2);
+                    pluck[i] = lp2;
                 }
-                let idx = 0;
+                // Plucking near the soundhole (about 1/5 of the string) gives the hollow nylon color
+                const delay = new Float32Array(length);
+                const pos = Math.max(1, Math.round(0.2 * length));
+                let mean = 0;
+                for (let i = 0; i < length; i++) {
+                    delay[i] = pluck[i] - (i >= pos ? pluck[i - pos] : 0);
+                    mean += delay[i] / length;
+                }
+                for (let i = 0; i < length; i++) delay[i] -= mean; // no DC thump
+
+                const attack = Math.round(0.002 * sr);
+                let idx = 0, lp = 0, apIn = 0, apOut = 0;
                 for (let n = start; n < out.length; n++) {
-                    const next = idx + 1 === period ? 0 : idx + 1;
-                    const v = delay[idx];
-                    out[n] += v;
-                    delay[idx] = damping * 0.5 * (v + delay[next]);
-                    idx = next;
+                    const x = delay[idx];
+                    const k = n - start;
+                    out[n] += amp * x * (k < attack ? k / attack : 1);
+                    lp = (1 - b) * x + b * lp;
+                    const ap = c * lp + apIn - c * apOut;
+                    apIn = lp;
+                    apOut = ap;
+                    delay[idx] = loss * ap;
+                    idx = idx + 1 === length ? 0 : idx + 1;
                 }
+            }
+
+            // Wooden body: air cavity and top plate resonances, softened highs
+            body(data) {
+                this.biquad(data, 'highpass', 75, 0.7);
+                this.biquad(data, 'peaking', 105, 1.8, 5);
+                this.biquad(data, 'peaking', 210, 2, 3.5);
+                this.biquad(data, 'peaking', 420, 2.5, 1.5);
+                this.biquad(data, 'peaking', 2500, 1, -4);
+                this.biquad(data, 'lowpass', 3800, 0.6);
+            }
+
+            // RBJ cookbook biquad, applied in place
+            biquad(data, type, freq, q, gainDb = 0) {
+                const w = 2 * Math.PI * freq / this.sampleRate;
+                const cos = Math.cos(w);
+                const alpha = Math.sin(w) / (2 * q);
+                let b0, b1, b2, a0, a1, a2;
+                if (type === 'lowpass') {
+                    b0 = (1 - cos) / 2; b1 = 1 - cos; b2 = b0;
+                    a0 = 1 + alpha; a1 = -2 * cos; a2 = 1 - alpha;
+                } else if (type === 'highpass') {
+                    b0 = (1 + cos) / 2; b1 = -(1 + cos); b2 = b0;
+                    a0 = 1 + alpha; a1 = -2 * cos; a2 = 1 - alpha;
+                } else {
+                    const A = Math.pow(10, gainDb / 40);
+                    b0 = 1 + alpha * A; b1 = -2 * cos; b2 = 1 - alpha * A;
+                    a0 = 1 + alpha / A; a1 = -2 * cos; a2 = 1 - alpha / A;
+                }
+                let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+                for (let i = 0; i < data.length; i++) {
+                    const x = data[i];
+                    const y = (b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+                    x2 = x1; x1 = x;
+                    y2 = y1; y1 = y;
+                    data[i] = y;
+                }
+            }
+
+            // Small wooden room: decaying stereo noise that gets darker as it fades
+            roomImpulse(ctx) {
+                const seconds = 1.8;
+                const length = Math.round(seconds * ctx.sampleRate);
+                const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+                for (let ch = 0; ch < 2; ch++) {
+                    const data = impulse.getChannelData(ch);
+                    let lp = 0;
+                    for (let i = 0; i < length; i++) {
+                        const t = i / length;
+                        lp += (0.5 - 0.45 * t) * ((Math.random() * 2 - 1) - lp);
+                        data[i] = lp * Math.pow(1 - t, 3);
+                    }
+                }
+                return impulse;
             }
 
             fadeOut(data, seconds) {
@@ -1779,6 +1887,7 @@
                 this.volumeSlider.addEventListener('input', (e) => {
                     this.volume = e.target.value / 100;
                     if (this.drumBus) this.drumBus.gain.value = this.volume;
+                    if (this.guitarBus) this.guitarBus.gain.value = this.volume;
                     this.saveSettings();
                 });
 
@@ -2304,11 +2413,36 @@
                 compressor.ratio.value = 4;
                 compressor.attack.value = 0.003;
                 compressor.release.value = 0.15;
-                compressor.connect(this.audioContext.destination);
+
+                // Brick-wall limiter so drums and guitar together never clip
+                const limiter = this.audioContext.createDynamicsCompressor();
+                limiter.threshold.value = -3;
+                limiter.knee.value = 0;
+                limiter.ratio.value = 20;
+                limiter.attack.value = 0.001;
+                limiter.release.value = 0.1;
+                limiter.connect(this.audioContext.destination);
+                compressor.connect(limiter);
 
                 this.drumBus = this.audioContext.createGain();
                 this.drumBus.gain.value = this.volume;
                 this.drumBus.connect(compressor);
+
+                // The guitar skips the compressor (it would pump with the kick)
+                // and gets a small room reverb for a warm, natural tone
+                this.guitarBus = this.audioContext.createGain();
+                this.guitarBus.gain.value = this.volume;
+                this.guitarBus.connect(limiter);
+
+                const reverb = this.audioContext.createConvolver();
+                reverb.buffer = this.guitar.roomImpulse(this.audioContext);
+                const wet = this.audioContext.createGain();
+                wet.gain.value = 0.3;
+                reverb.connect(wet).connect(this.guitarBus);
+
+                this.guitarIn = this.audioContext.createGain();
+                this.guitarIn.connect(this.guitarBus);
+                this.guitarIn.connect(reverb);
             }
 
             scheduler() {
@@ -2509,11 +2643,11 @@
                 const humanize = 1 + (Math.random() - 0.5) * 0.1;
                 gainNode.gain.value = STROKE_LEVEL[stroke] * humanize;
                 src.connect(gainNode);
-                gainNode.connect(this.drumBus);
+                gainNode.connect(this.guitarIn);
 
-                // Every new stroke (and especially a chuck) stops the strings still ringing
+                // Every new stroke (and especially a chuck) damps the strings still ringing
                 if (this.lastStrum && this.lastStrum.time < time) {
-                    this.lastStrum.gain.gain.setTargetAtTime(0, time, 0.015);
+                    this.lastStrum.gain.gain.setTargetAtTime(0, time, 0.03);
                 }
                 this.lastStrum = { gain: gainNode, time };
 
