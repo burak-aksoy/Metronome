@@ -42,7 +42,8 @@
         "Time signatures 1–16 beats",
         "Subdivisions: Quarter, Eighth, Triplet, Sixteenth",
         "Multiple sound types: Digital, Wood, Click, Beep",
-        "Drum rhythm mode with 12 styles (Rock, Pop, Funk, Disco, Hip-Hop, Trap, Reggae, Bossa Nova, Shuffle, Waltz, 6/8 Ballad, Metal)",
+        "Drum rhythm mode with 17 styles (Rock, Pop, Funk, Disco, Hip-Hop, Trap, Reggae, Bossa Nova, Shuffle, Waltz, 6/8 Ballad, Metal)",
+        "Turkish pop rhythms with darbuka and tef: Çiftetelli, Maksum, Türk Pop Dans, Türk Pop Ballad, Karşılama 9/8",
         "Editable drum step sequencer with swing and automatic fills",
         "Offline support",
         "Installable PWA"
@@ -896,9 +897,12 @@
             openhat: { label: 'OPEN',  color: '#ffb347', level: 0.35 },
             hihat:   { label: 'HAT',   color: '#ffd166', level: 0.4 },
             shaker:  { label: 'SHAKE', color: '#f4a261', level: 0.3 },
+            tef:     { label: 'TEF',   color: '#e9c46a', level: 0.35 },
             rim:     { label: 'RIM',   color: '#7ee787', level: 0.55 },
             clap:    { label: 'CLAP',  color: '#ff6b9d', level: 0.5 },
             snare:   { label: 'SNARE', color: '#03dac6', level: 0.8 },
+            tek:     { label: 'TEK',   color: '#4dd0e1', level: 0.6 },
+            dum:     { label: 'DÜM',   color: '#9575cd', level: 0.9 },
             tomH:    { label: 'TOM H', color: '#cf6679', level: 0.75 },
             tomM:    { label: 'TOM M', color: '#cf6679', level: 0.75 },
             tomL:    { label: 'TOM L', color: '#cf6679', level: 0.8 },
@@ -916,8 +920,13 @@
         // Fills roll down the kit: snare -> high tom -> mid tom -> floor tom
         const FILL_VOICES = ['snare', 'tomH', 'tomM', 'tomL'];
 
+        // Darbuka styles roll on the darbuka instead of the toms
+        const DARBUKA_FILL = ['tek', 'tek', 'tek', 'dum'];
+
         // spb = steps per beat (2 = eighths, 3 = triplets, 4 = sixteenths)
         // swing = default swing amount (0..1) applied to off-steps
+        // groups = optional uneven beat lengths in steps, for aksak meters (e.g. 9/8 = 2+2+2+3)
+        // fill = optional voices for the fill roll (defaults to FILL_VOICES)
         const DRUM_STYLES = [
             { id: 'rock', name: 'Rock', meter: '4/4', beats: 4, spb: 2, swing: 0, voices: {
                 hihat: 'XxXxXxXx',
@@ -983,6 +992,38 @@
                 ride:  'X...X...X...X...',
                 snare: '....X.......X...',
                 kick:  'xxxxxxxxxxxxxxxx'
+            }},
+            // Türkçe pop: darbuka (düm/tek) and tef over a pop kit
+            { id: 'tr-ciftetelli', name: 'Türk Pop (Çiftetelli)', meter: '4/4', beats: 4, spb: 4, swing: 0, fill: DARBUKA_FILL, voices: {
+                tef:  'x.x.X.x.x.x.X.x.',
+                tek:  '..g.X.X...g.X.g.',
+                dum:  'X.......X.......',
+                kick: 'X.......X.......'
+            }},
+            { id: 'tr-maksum', name: 'Türk Pop (Maksum)', meter: '4/4', beats: 4, spb: 4, swing: 0, fill: DARBUKA_FILL, voices: {
+                hihat: 'x.x.x.x.x.x.x.x.',
+                tek:   '..X.g.X...g.X.g.',
+                dum:   'X.......X.......',
+                kick:  'X.......X.......'
+            }},
+            { id: 'tr-dance', name: 'Türk Pop Dans', meter: '4/4', beats: 4, spb: 4, swing: 0, fill: DARBUKA_FILL, voices: {
+                openhat: '..x...x...x...x.',
+                clap:    '....X.......X...',
+                tek:     '..X.g.X...g.X.g.',
+                dum:     'X.......X.......',
+                kick:    'X...X...X...X...'
+            }},
+            { id: 'tr-ballad', name: 'Türk Pop Ballad', meter: '4/4', beats: 4, spb: 2, swing: 0, voices: {
+                hihat: 'xgxgxgxg',
+                tef:   '..x...x.',
+                rim:   '..X...X.',
+                kick:  'X..xX...'
+            }},
+            { id: 'tr-karsilama', name: 'Karşılama / Roman', meter: '9/8', beats: 4, spb: 2, groups: [2, 2, 2, 3], swing: 0, fill: DARBUKA_FILL, voices: {
+                tef:  'X.x.x.x..',
+                tek:  '..X...Xxg',
+                dum:  'X...X....',
+                kick: 'X...X....'
             }}
         ];
 
@@ -1008,7 +1049,10 @@
                     shaker:  [0.1, (ctx, out) => this.shaker(ctx, out)],
                     tomH:    [0.5, (ctx, out) => this.tom(ctx, out, 220)],
                     tomM:    [0.5, (ctx, out) => this.tom(ctx, out, 165)],
-                    tomL:    [0.6, (ctx, out) => this.tom(ctx, out, 110)]
+                    tomL:    [0.6, (ctx, out) => this.tom(ctx, out, 110)],
+                    dum:     [0.6, (ctx, out) => this.dum(ctx, out)],
+                    tek:     [0.15, (ctx, out) => this.tek(ctx, out)],
+                    tef:     [0.3, (ctx, out) => this.tef(ctx, out)]
                 };
                 await Promise.all(Object.entries(voices).map(async ([name, [duration, build]]) => {
                     this.buffers[name] = await this.render(duration, build);
@@ -1196,6 +1240,60 @@
                 n.connect(lp).connect(stick).connect(out);
                 n.start(0);
             }
+
+            // Darbuka "düm": open stroke in the middle of the head, deep and resonant
+            dum(ctx, out) {
+                const osc = ctx.createOscillator();
+                osc.frequency.setValueAtTime(125, 0);
+                osc.frequency.exponentialRampToValueAtTime(88, 0.1);
+                const body = this.decayGain(ctx, 1, 0.55);
+                osc.connect(body).connect(out);
+                osc.start(0);
+                osc.stop(0.6);
+
+                const overtone = ctx.createOscillator();
+                overtone.type = 'triangle';
+                overtone.frequency.value = 210;
+                const ring = this.decayGain(ctx, 0.15, 0.25);
+                overtone.connect(ring).connect(out);
+                overtone.start(0);
+                overtone.stop(0.3);
+
+                const n = this.noise(ctx, 0.04);
+                const lp = this.filter(ctx, 'lowpass', 900);
+                const slap = this.decayGain(ctx, 0.25, 0.03);
+                n.connect(lp).connect(slap).connect(out);
+                n.start(0);
+            }
+
+            // Darbuka "tek": sharp stroke on the rim
+            tek(ctx, out) {
+                const n = this.noise(ctx, 0.1);
+                const bp = this.filter(ctx, 'bandpass', 3200, 1.5);
+                const crack = this.decayGain(ctx, 1, 0.05);
+                n.connect(bp).connect(crack).connect(out);
+                n.start(0);
+
+                const osc = ctx.createOscillator();
+                osc.frequency.value = 1150;
+                const ping = this.decayGain(ctx, 0.35, 0.07);
+                osc.connect(ping).connect(out);
+                osc.start(0);
+                osc.stop(0.12);
+            }
+
+            // Tef (frame drum with jingles)
+            tef(ctx, out) {
+                this.metallic(ctx, out, 70, 0.18, 9000, 6000);
+                const n = this.noise(ctx, 0.3);
+                const bp = this.filter(ctx, 'bandpass', 7500, 2);
+                const g = ctx.createGain();
+                g.gain.setValueAtTime(0.0001, 0);
+                g.gain.exponentialRampToValueAtTime(0.8, 0.004);
+                g.gain.exponentialRampToValueAtTime(0.0001, 0.22);
+                n.connect(bp).connect(g).connect(out);
+                n.start(0);
+            }
         }
 
         class Metronome {
@@ -1231,7 +1329,7 @@
                 this.playheadStep = -1;
 
                 // Visuals
-                this.notesInQueue = []; // { note, time, ticksPerBeat, drums, bar, fill }
+                this.notesInQueue = []; // { note, time, drums, beat, beatStart, bar, fill }
 
                 // Tap Tempo
                 this.tapTimes = [];
@@ -1462,7 +1560,7 @@
                 this.swing = pattern.swing;
                 this.updateSwingUI();
                 // Keep the groove position if the meter is the same, otherwise restart the bar
-                if (pattern.beats !== oldPattern.beats || pattern.spb !== oldPattern.spb) {
+                if (pattern.groups.join() !== oldPattern.groups.join()) {
                     this.current16thNote = 0;
                 }
                 this.buildDrumGrid();
@@ -1472,27 +1570,30 @@
             // The style's preset merged with the user's edits
             getPattern() {
                 const style = DRUM_STYLES.find(s => s.id === this.drumStyle) || DRUM_STYLES[0];
-                const steps = style.beats * style.spb;
+                const groups = style.groups || Array(style.beats).fill(style.spb);
+                const steps = groups.reduce((sum, len) => sum + len, 0);
+                // beatOf[step] = index of the beat the step belongs to
+                const beatOf = groups.flatMap((len, beat) => Array(len).fill(beat));
                 const voices = {};
                 const custom = this.customPatterns[style.id] || {};
                 Object.keys(DRUM_VOICES).forEach(voice => {
                     const s = custom[voice] || style.voices[voice];
                     if (s && s.length === steps) voices[voice] = s;
                 });
-                return { ...style, steps, voices };
-            }
-
-            getTicksPerBeat() {
-                return this.mode === 'drums' ? this.getPattern().spb : this.subdivision;
+                return { ...style, beats: groups.length, groups, steps, beatOf, voices };
             }
 
             getBeats() {
                 return this.mode === 'drums' ? this.getPattern().beats : this.beatsPerMeasure;
             }
 
+            isSwingable(pattern) {
+                // Swing only makes sense on straight (even) grids with even beats
+                return pattern.groups.every(len => len % 2 === 0);
+            }
+
             updateSwingUI() {
-                // Swing only makes sense on straight (even) grids
-                const swingable = this.getPattern().spb % 2 === 0;
+                const swingable = this.isSwingable(this.getPattern());
                 this.swingSlider.value = Math.round(this.swing * 100);
                 this.swingSlider.disabled = !swingable;
                 this.swingControl.classList.toggle('disabled', !swingable);
@@ -1521,20 +1622,23 @@
 
                     const stepsEl = document.createElement('div');
                     stepsEl.className = 'row-steps';
-                    for (let b = 0; b < pattern.beats; b++) {
+                    let i = 0;
+                    pattern.groups.forEach(len => {
                         const group = document.createElement('div');
                         group.className = 'beat-group';
-                        for (let s = 0; s < pattern.spb; s++) {
-                            const i = b * pattern.spb + s;
+                        // Longer (aksak) beats get proportionally more room
+                        group.style.flexGrow = len;
+                        for (let s = 0; s < len; s++, i++) {
+                            const step = i;
                             const cell = document.createElement('button');
                             cell.className = 'step';
-                            this.setCellValue(cell, steps[i]);
-                            cell.addEventListener('click', () => this.toggleStep(voice, i, cell));
+                            this.setCellValue(cell, steps[step]);
+                            cell.addEventListener('click', () => this.toggleStep(voice, step, cell));
                             group.appendChild(cell);
-                            this.gridColumns[i].push({ cell, voice });
+                            this.gridColumns[step].push({ cell, voice });
                         }
                         stepsEl.appendChild(group);
-                    }
+                    });
                     row.appendChild(stepsEl);
                     this.drumGrid.appendChild(row);
                 });
@@ -1655,13 +1759,19 @@
             nextNote() {
                 // Advance current tick and time by one subdivision (or drum step)
                 const secondsPerBeat = 60.0 / this.tempo;
-                const ticksPerBeat = this.getTicksPerBeat();
+                let ticksPerBeat = this.subdivision;
+                let totalTicks = this.beatsPerMeasure * this.subdivision;
+                if (this.mode === 'drums') {
+                    const pattern = this.getPattern();
+                    ticksPerBeat = pattern.spb;
+                    totalTicks = pattern.steps;
+                }
 
                 this.nextNoteTime += secondsPerBeat / ticksPerBeat;
 
                 this.current16thNote++;
 
-                if (this.current16thNote >= this.getBeats() * ticksPerBeat) {
+                if (this.current16thNote >= totalTicks) {
                     this.current16thNote = 0;
                     this.barCount++;
                 }
@@ -1670,11 +1780,14 @@
             scheduleNote(beatNumber, time) {
                 const ticksPerBeat = this.subdivision;
 
-                // Push the note to the queue for visual processing
-                this.notesInQueue.push({ note: beatNumber, time: time, ticksPerBeat, drums: false });
-
                 const isMeasureStart = (beatNumber === 0);
                 const isBeatStart = (beatNumber % ticksPerBeat === 0);
+
+                // Push the note to the queue for visual processing
+                this.notesInQueue.push({
+                    note: beatNumber, time: time, drums: false,
+                    beat: Math.floor(beatNumber / ticksPerBeat), beatStart: isBeatStart
+                });
 
                 if (isMeasureStart) {
                     this.playClick('measure', time);
@@ -1747,22 +1860,26 @@
             scheduleDrumStep(step, time) {
                 const pattern = this.getPattern();
                 const spb = pattern.spb;
+                const beat = pattern.beatOf[step];
+                const isBeatStart = step === 0 || pattern.beatOf[step - 1] !== beat;
 
                 // Swing delays every off-step by up to half a step
-                if (spb % 2 === 0 && step % 2 === 1) {
+                if (this.isSwingable(pattern) && step % 2 === 1) {
                     time += this.swing * 0.5 * (60.0 / this.tempo / spb);
                 }
 
                 // The last beats of every Nth bar are replaced by a fill
                 const isFillBar = this.fillEvery > 0 && this.barCount % this.fillEvery === this.fillEvery - 1;
-                const fillSteps = (pattern.beats >= 4 ? 2 : 1) * spb;
+                const fillBeats = pattern.beats >= 4 ? 2 : 1;
+                const fillSteps = pattern.groups.slice(-fillBeats).reduce((sum, len) => sum + len, 0);
                 const fillStart = pattern.steps - fillSteps;
                 const inFill = isFillBar && step >= fillStart;
 
                 if (inFill) {
+                    const fillVoices = pattern.fill || FILL_VOICES;
                     const i = step - fillStart;
-                    const voice = FILL_VOICES[Math.floor(i * FILL_VOICES.length / fillSteps)];
-                    this.playDrum(voice, i % spb === 0 ? 'X' : 'x', time);
+                    const voice = fillVoices[Math.floor(i * fillVoices.length / fillSteps)];
+                    this.playDrum(voice, isBeatStart ? 'X' : 'x', time);
                 } else {
                     Object.entries(pattern.voices).forEach(([voice, steps]) => {
                         const v = steps[step];
@@ -1775,11 +1892,14 @@
                     this.playDrum('crash', 'X', time);
                 }
 
-                if (this.clickLayer && step % spb === 0) {
+                if (this.clickLayer && isBeatStart) {
                     this.playClick(step === 0 ? 'measure' : 'beat', time, 0.7);
                 }
 
-                this.notesInQueue.push({ note: step, time, ticksPerBeat: spb, drums: true, bar: this.barCount, fill: inFill });
+                this.notesInQueue.push({
+                    note: step, time, drums: true, beat, beatStart: isBeatStart,
+                    bar: this.barCount, fill: inFill
+                });
             }
 
             playDrum(voice, velocity, time) {
@@ -1830,11 +1950,9 @@
                 // Only redraw when a new tick has started
                 if (current) {
                     const currentNote = current.note;
-                    const ticksPerBeat = current.ticksPerBeat;
-
                     const isMeasureStart = (currentNote === 0);
-                    const isBeatStart = (currentNote % ticksPerBeat === 0);
-                    const currentBeatIndex = Math.floor(currentNote / ticksPerBeat);
+                    const isBeatStart = current.beatStart;
+                    const currentBeatIndex = current.beat;
 
                     // Reset visual state
                     this.beatVisual.classList.remove('accent', 'active');

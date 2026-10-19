@@ -14,7 +14,8 @@ A precise, beautiful metronome for musicians — built as a Progressive Web App 
 - **Subdivisions** — Quarter, Eighth, Triplet, Sixteenth
 - **Sound types** — Digital, Wood, Click, Beep
 - **Drum mode** — practice with real grooves instead of a click: Rock, Pop, Funk, Disco/House, Hip-Hop, Trap, Reggae, Bossa Nova, Blues Shuffle, Waltz, 6/8 Ballad, Metal
-  - Synthesized drum kit (kick, snare, hi-hats, ride, crash, clap, rim, shaker, toms) — no audio files needed
+  - Türkçe pop ritimleri: Türk Pop (Çiftetelli), Türk Pop (Maksum), Türk Pop Dans, Türk Pop Ballad, Karşılama / Roman (9/8) — with darbuka (düm/tek) and tef
+  - Synthesized drum kit (kick, snare, hi-hats, ride, crash, clap, rim, shaker, toms, darbuka, tef) — no audio files needed
   - Editable step sequencer — tap steps to cycle off → hit → accent, tap a row name to mute it
   - Swing control, automatic drum fills every 2/4/8 bars with a crash on the next downbeat
   - Optional click layer on top of the drums
