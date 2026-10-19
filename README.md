@@ -19,6 +19,11 @@ A precise, beautiful metronome for musicians — built as a Progressive Web App 
   - Editable step sequencer — tap steps to cycle off → hit → accent, tap a row name to mute it
   - Swing control, automatic drum fills every 2/4/8 bars with a crash on the next downbeat
   - Optional click layer on top of the drums
+- **Strum mode** — build a guitar strumming pattern and practice with it
+  - Pick a meter (4/4 in 8ths or 16ths, 3/4, 2/4, 6/8, 12/8 shuffle, 9/8 karşılama) and set each slot to down ↓, up ↑, mute ✕ (chuck) or rest
+  - A drum groove is generated to fit your strum: hi-hat follows the strokes, snare on backbeats and chucks, kick pushes with syncopated strums
+  - Synthesized guitar strum (Karplus-Strong) with chord choice — can be turned off to play along yourself
+  - Save patterns by name (with meter, chord and tempo) in browser storage and load them later
 - **Visual beat indicator** — animated circle + per-beat dots
 - **Volume control**
 - **Screen wake lock** — keeps your screen on while practicing
