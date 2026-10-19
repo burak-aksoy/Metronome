@@ -1,4 +1,4 @@
-const CACHE = 'metronome-v2';
+const CACHE = 'metronome-v3';
 const ASSETS = ['./piki_metronome.html', './manifest.json'];
 
 self.addEventListener('install', e => {
